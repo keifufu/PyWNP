@@ -1,20 +1,18 @@
 [project]
 name = "pywnp"
 version = "1.0.0"
-authors = [
-  { name="keifufu", email="keifufu@noonly.net" },
-]
 description = "A python library to communicate with the WebNowPlaying-Redux browser extension"
+authors = [ { name="keifufu", email="keifufu@noonly.net" } ]
 readme = "README.md"
+license = { file = "LICENSE" }
+keywords = [ "webnowplaying", "wnp", "youtube", "spotify", "media", "music" ]
 requires-python = ">=3.7"
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = [
-  "websockets",
-]
+dependencies = [ "websockets" ]
 
 [project.urls]
 "Homepage" = "https://github.com/keifufu/PyWNP"
