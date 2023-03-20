@@ -70,6 +70,7 @@ class MediaEvents:
       positionInSeconds = 0
     if positionInSeconds > WNPRedux.mediaInfo.DurationSeconds:
       positionInSeconds = WNPRedux.mediaInfo.DurationSeconds
+    if positionInSeconds == 0: return
     positionInPercent = positionInSeconds / WNPRedux.mediaInfo.DurationSeconds
     # This makes sure it always gives us 0.0, not 0,0 (dot instead of comma, regardless of localization)
     positionInPercentString = str(positionInPercent)
@@ -83,14 +84,17 @@ class MediaEvents:
     self.SetPositionSeconds(WNPRedux.mediaInfo.PositionSeconds + seconds)
 
   def SetPositionPercent(self, percent):
+    if WNPRedux.mediaInfo.DurationSeconds == 0: return
     seconds = round(percent / 100 * WNPRedux.mediaInfo.DurationSeconds)
     self.SetPositionSeconds(seconds)
 
   def RevertPositionPercent(self, percent):
+    if WNPRedux.mediaInfo.DurationSeconds == 0: return
     seconds = round(percent / 100 * WNPRedux.mediaInfo.DurationSeconds)
     self.SetPositionSeconds(WNPRedux.mediaInfo.PositionSeconds - seconds)
 
   def ForwardPositionPercent(self, percent):
+    if WNPRedux.mediaInfo.DurationSeconds == 0: return
     seconds = round(percent / 100 * WNPRedux.mediaInfo.DurationSeconds)
     self.SetPositionSeconds(WNPRedux.mediaInfo.PositionSeconds + seconds)
   
