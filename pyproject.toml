@@ -1,0 +1,21 @@
+[project]
+name = "pywnp"
+version = "1.0.0"
+authors = [
+  { name="keifufu", email="keifufu@noonly.net" },
+]
+description = "A python library to communicate with the WebNowPlaying-Redux browser extension"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "websockets",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/keifufu/PyWNP"
+"Bug Tracker" = "https://github.com/keifufu/PyWNP/issues"

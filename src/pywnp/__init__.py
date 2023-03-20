@@ -1,0 +1,1 @@
+from .pywnp import WNPRedux
