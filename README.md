@@ -35,6 +35,10 @@ Opens the WebSocket if it isn't already opened.
 `version` has to be 'x.x.x'.
 
 ---
+### `WNPRedux.isInitialized`
+Whether the WebSocket is initialized or not
+
+---
 ### `WNPRedux.Log(type, message)`
 Calls the `logger` provided in `WNPRedux.Initialize()`  
 
