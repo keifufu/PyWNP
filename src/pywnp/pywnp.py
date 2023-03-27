@@ -129,7 +129,7 @@ class WNPRedux:
   _future = None
   _logger = None
 
-  def Initialize(port, version, logger):
+  def Initialize(port, version, logger, loopback = '127.0.0.1'):
     if WNPRedux.isInitialized: return
     WNPRedux.isInitialized = True
     WNPRedux.mediaInfo = MediaInfo()
@@ -137,14 +137,14 @@ class WNPRedux:
     WNPRedux.clients = set()
     WNPRedux._version = version
     WNPRedux._logger = logger
-    Thread(target = WNPRedux._threaded_start, args = (port,), daemon=True).start()
+    Thread(target = WNPRedux._threaded_start, args = (port, loopback,), daemon=True).start()
 
-  def _threaded_start(port):
-    asyncio.run(WNPRedux._start(port))
+  def _threaded_start(port, loopback):
+    asyncio.run(WNPRedux._start(port, loopback))
 
-  async def _start(port):
+  async def _start(port, loopback):
     if WNPRedux._server != None: return
-    WNPRedux._server = serve(WNPRedux._onConnect, 'localhost', port)
+    WNPRedux._server = serve(WNPRedux._onConnect, loopback, port)
     WNPRedux._future = asyncio.Future()
     async with WNPRedux._server:
       await WNPRedux._future
