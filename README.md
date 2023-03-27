@@ -29,7 +29,7 @@ WNPRedux.Close()
 ```
 
 ---
-### `WNPRedux.Initialize(port, version, logger)`
+### `WNPRedux.Initialize(port, version, logger, loopback = '127.0.0.1')`
 Opens the WebSocket if it isn't already opened.  
 `port` should _not_ be used by other adapters already, or interfere with any other programs.  
 `version` has to be 'x.x.x'.
