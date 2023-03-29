@@ -259,8 +259,10 @@ class WNPRedux:
     dur_arr = time.split(':')
 
     # Duration will always have seconds and minutes, but hours are optional
-    dur_sec = int(dur_arr[-1])
-    dur_min = int(dur_arr[-2]) * 60 if len(dur_arr) > 1 else 0
-    dur_hour = int(dur_arr[-3]) * 60 * 60 if len(dur_arr) > 2 else 0
-
-    return dur_hour + dur_min + dur_sec
+    try:
+      dur_sec = int(dur_arr[-1])
+      dur_min = int(dur_arr[-2]) * 60 if len(dur_arr) > 1 else 0
+      dur_hour = int(dur_arr[-3]) * 60 * 60 if len(dur_arr) > 2 else 0
+      return dur_hour + dur_min + dur_sec
+    except ValueError:
+      return 0
