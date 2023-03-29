@@ -122,7 +122,7 @@ class WNPRedux:
   isInitialized = False
   mediaInfo = MediaInfo()
   mediaEvents = MediaEvents()
-  _mediaInfoDictionary = set()
+  _mediaInfoDictionary = list()
   _server = None
   clients = set()
   _version = '0.0.0'
@@ -133,7 +133,7 @@ class WNPRedux:
     if WNPRedux.isInitialized: return
     WNPRedux.isInitialized = True
     WNPRedux.mediaInfo = MediaInfo()
-    WNPRedux._mediaInfoDictionary = set()
+    WNPRedux._mediaInfoDictionary = list()
     WNPRedux.clients = set()
     WNPRedux._version = version
     WNPRedux._logger = logger
@@ -173,7 +173,7 @@ class WNPRedux:
     await websocket.send(f'ADAPTER_VERSION {WNPRedux._version};WNPRLIB_REVISION 1')
     try:
       async for message in websocket:
-        type = message[:message.index(' ')].upper()
+        messageType = message[:message.index(' ')].upper()
         info = message[message.index(' ') + 1:]
 
         currentMediaInfo = MediaInfo()
@@ -187,26 +187,26 @@ class WNPRedux:
         currentMediaInfo.WebSocketID = websocket.id
 
         if not found:
-          WNPRedux._mediaInfoDictionary.add(currentMediaInfo)
+          WNPRedux._mediaInfoDictionary.append(currentMediaInfo)
 
-        if type == 'PLAYER':
+        if messageType == 'PLAYER':
           currentMediaInfo.Player = info
-        elif type == 'STATE':
+        elif messageType == 'STATE':
           currentMediaInfo.State = info
-        elif type == 'TITLE':
+        elif messageType == 'TITLE':
           currentMediaInfo.Title = info
-        elif type == 'ARTIST':
+        elif messageType == 'ARTIST':
           currentMediaInfo.Artist = info
-        elif type == 'ALBUM':
+        elif messageType == 'ALBUM':
           currentMediaInfo.Album = info
-        elif type == 'COVER':
+        elif messageType == 'COVER':
           currentMediaInfo.CoverUrl = info
-        elif type == 'DURATION':
+        elif messageType == 'DURATION':
           currentMediaInfo.Duration = info
           currentMediaInfo.DurationSeconds = WNPRedux._ConvertTimeToSeconds(info)
           # I guess set PositionPercent to 0, because if duration changes, a new video is playing
           currentMediaInfo.PositionPercent = 0
-        elif type == 'POSITION':
+        elif messageType == 'POSITION':
           currentMediaInfo.Position = info
           currentMediaInfo.PositionSeconds = WNPRedux._ConvertTimeToSeconds(info)
 
@@ -214,22 +214,22 @@ class WNPRedux:
             currentMediaInfo.PositionPercent = currentMediaInfo.PositionSeconds / currentMediaInfo.DurationSeconds * 100
           else:
             currentMediaInfo.PositionPercent = 100
-        elif type == 'VOLUME':
+        elif messageType == 'VOLUME':
           currentMediaInfo.Volume = int(info)
-        elif type == 'RATING':
+        elif messageType == 'RATING':
           currentMediaInfo.Rating = int(info)
-        elif type == 'REPEAT':
+        elif messageType == 'REPEAT':
           currentMediaInfo.RepeatState = info
-        elif type == 'SHUFFLE':
+        elif messageType == 'SHUFFLE':
           currentMediaInfo.Shuffle = info.upper() == 'TRUE'
-        elif type == 'ERROR':
+        elif messageType == 'ERROR':
           WNPRedux.Log('Error', info)
-        elif type == 'ERRORDEBUG':
+        elif messageType == 'ERRORDEBUG':
           WNPRedux.Log('Debug', info)
         else:
-          WNPRedux.Log('Warning', f'Unknown message type: {type}')
+          WNPRedux.Log('Warning', f'Unknown message type: {messageType}')
         
-        if type != 'POSITION' and currentMediaInfo.Title != '':
+        if messageType != 'POSITION' and currentMediaInfo.Title != '':
           WNPRedux._UpdateMediaInfo()
     finally:
       WNPRedux.clients.remove(websocket)
@@ -259,8 +259,10 @@ class WNPRedux:
     dur_arr = time.split(':')
 
     # Duration will always have seconds and minutes, but hours are optional
-    dur_sec = int(dur_arr[-1])
-    dur_min = int(dur_arr[-2]) * 60 if len(dur_arr) > 1 else 0
-    dur_hour = int(dur_arr[-3]) * 60 * 60 if len(dur_arr) > 2 else 0
-
-    return dur_hour + dur_min + dur_sec
+    try:
+      dur_sec = int(dur_arr[-1])
+      dur_min = int(dur_arr[-2]) * 60 if len(dur_arr) > 1 else 0
+      dur_hour = int(dur_arr[-3]) * 60 * 60 if len(dur_arr) > 2 else 0
+      return dur_hour + dur_min + dur_sec
+    except ValueError:
+      return 0
