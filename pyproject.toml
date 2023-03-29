@@ -1,6 +1,6 @@
 [project]
 name = "pywnp"
-version = "1.0.2"
+version = "1.0.3"
 description = "A python library to communicate with the WebNowPlaying-Redux browser extension"
 authors = [ { name="keifufu", email="keifufu@noonly.net" } ]
 readme = "README.md"
