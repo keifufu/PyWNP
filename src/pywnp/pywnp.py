@@ -40,10 +40,8 @@ class MediaInfo:
   @Title.setter
   def Title(self, value):
     self._Title = value
-    if value != '':
-      self.Timestamp = datetime.now().timestamp()
-    else:
-      self.Timestamp = 0
+    if len(value) > 0: self.Timestamp = datetime.now().timestamp()
+    else: self.Timestamp = 0
   
   @property
   def Volume(self):
@@ -52,7 +50,7 @@ class MediaInfo:
   @Volume.setter
   def Volume(self, value):
     self._Volume = value
-    self.Timestamp = datetime.now().timestamp()
+    if self.State == 'PLAYING': self.Timestamp = datetime.now().timestamp()
 
 class MediaEvents:
   def TogglePlaying(self):
@@ -97,10 +95,8 @@ class MediaEvents:
   
   def SetVolume(self, volume):
     newVolume = volume
-    if volume < 0:
-        newVolume = 0
-    if volume > 100:
-        newVolume = 100
+    if volume < 0: newVolume = 0
+    if volume > 100: newVolume = 100
     WNPRedux._SendMessage(f'SET_VOLUME {newVolume}')
 
   def ToggleRepeat(self):
@@ -124,33 +120,35 @@ class WNPRedux:
   mediaEvents = MediaEvents()
   _mediaInfoDictionary = list()
   _server = None
-  clients = set()
+  _clients = set()
+  clients = 0
   _version = '0.0.0'
   _future = None
   _logger = None
 
-  def Initialize(port, version, logger, loopback = '127.0.0.1'):
+  def Initialize(port, version, logger, listenAddress = '127.0.0.1'):
     if WNPRedux.isInitialized: return
     WNPRedux.isInitialized = True
     WNPRedux.mediaInfo = MediaInfo()
     WNPRedux._mediaInfoDictionary = list()
-    WNPRedux.clients = set()
+    WNPRedux._clients = set()
+    WNPRedux.clients = 0
     WNPRedux._version = version
     WNPRedux._logger = logger
-    Thread(target = WNPRedux._threaded_start, args = (port, loopback,), daemon=True).start()
+    Thread(target = WNPRedux._threaded_start, args = (port, listenAddress,), daemon=True).start()
 
-  def _threaded_start(port, loopback):
-    asyncio.run(WNPRedux._start(port, loopback))
+  def _threaded_start(port, listenAddress):
+    asyncio.run(WNPRedux._start(port, listenAddress))
 
-  async def _start(port, loopback):
+  async def _start(port, listenAddress):
     if WNPRedux._server != None: return
-    WNPRedux._server = serve(WNPRedux._onConnect, loopback, port)
+    WNPRedux._server = serve(WNPRedux._onConnect, listenAddress, port)
     WNPRedux._future = asyncio.Future()
     async with WNPRedux._server:
       await WNPRedux._future
 
   def _SendMessage(message):
-    for client in WNPRedux.clients:
+    for client in WNPRedux._clients:
       if client.id == WNPRedux.mediaInfo.WebSocketID:
         asyncio.run(client.send(message))
         break
@@ -168,71 +166,79 @@ class WNPRedux:
     pass
 
   async def _onConnect(websocket):
-    WNPRedux.clients.add(websocket)
+    WNPRedux._clients.add(websocket)
+    WNPRedux.clients = len(WNPRedux._clients)
     websocket.id = str(datetime.now())
     await websocket.send(f'ADAPTER_VERSION {WNPRedux._version};WNPRLIB_REVISION 1')
     try:
       async for message in websocket:
-        messageType = message[:message.index(' ')].upper()
-        info = message[message.index(' ') + 1:]
+        try:
+          messageType = message[:message.index(' ')].upper()
+          info = message[message.index(' ') + 1:]
 
-        currentMediaInfo = MediaInfo()
-        found = False
-        for mediaInfo in WNPRedux._mediaInfoDictionary:
-          if mediaInfo.WebSocketID == websocket.id:
-            currentMediaInfo = mediaInfo
-            found = True
-            break
-          
-        currentMediaInfo.WebSocketID = websocket.id
+          currentMediaInfo = MediaInfo()
+          found = False
+          for mediaInfo in WNPRedux._mediaInfoDictionary:
+            if mediaInfo.WebSocketID == websocket.id:
+              currentMediaInfo = mediaInfo
+              found = True
+              break
+            
+          currentMediaInfo.WebSocketID = websocket.id
 
-        if not found:
-          WNPRedux._mediaInfoDictionary.append(currentMediaInfo)
+          if not found:
+            WNPRedux._mediaInfoDictionary.append(currentMediaInfo)
 
-        if messageType == 'PLAYER':
-          currentMediaInfo.Player = info
-        elif messageType == 'STATE':
-          currentMediaInfo.State = info
-        elif messageType == 'TITLE':
-          currentMediaInfo.Title = info
-        elif messageType == 'ARTIST':
-          currentMediaInfo.Artist = info
-        elif messageType == 'ALBUM':
-          currentMediaInfo.Album = info
-        elif messageType == 'COVER':
-          currentMediaInfo.CoverUrl = info
-        elif messageType == 'DURATION':
-          currentMediaInfo.Duration = info
-          currentMediaInfo.DurationSeconds = WNPRedux._ConvertTimeToSeconds(info)
-          # I guess set PositionPercent to 0, because if duration changes, a new video is playing
-          currentMediaInfo.PositionPercent = 0
-        elif messageType == 'POSITION':
-          currentMediaInfo.Position = info
-          currentMediaInfo.PositionSeconds = WNPRedux._ConvertTimeToSeconds(info)
+          if messageType == 'PLAYER':
+            currentMediaInfo.Player = info
+          elif messageType == 'STATE':
+            currentMediaInfo.State = info
+          elif messageType == 'TITLE':
+            currentMediaInfo.Title = info
+          elif messageType == 'ARTIST':
+            currentMediaInfo.Artist = info
+          elif messageType == 'ALBUM':
+            currentMediaInfo.Album = info
+          elif messageType == 'COVER':
+            currentMediaInfo.CoverUrl = info
+          elif messageType == 'DURATION':
+            currentMediaInfo.Duration = info
+            currentMediaInfo.DurationSeconds = WNPRedux._ConvertTimeToSeconds(info)
+            # I guess set PositionPercent to 0, because if duration changes, a new video is playing
+            currentMediaInfo.PositionPercent = 0
+          elif messageType == 'POSITION':
+            currentMediaInfo.Position = info
+            currentMediaInfo.PositionSeconds = WNPRedux._ConvertTimeToSeconds(info)
 
-          if (currentMediaInfo.DurationSeconds > 0):
-            currentMediaInfo.PositionPercent = currentMediaInfo.PositionSeconds / currentMediaInfo.DurationSeconds * 100
+            if (currentMediaInfo.DurationSeconds > 0):
+              currentMediaInfo.PositionPercent = (currentMediaInfo.PositionSeconds / currentMediaInfo.DurationSeconds) * 100
+            else:
+              currentMediaInfo.PositionPercent = 100
+          elif messageType == 'VOLUME':
+            currentMediaInfo.Volume = int(info)
+          elif messageType == 'RATING':
+            currentMediaInfo.Rating = int(info)
+          elif messageType == 'REPEAT':
+            currentMediaInfo.RepeatState = info
+          elif messageType == 'SHUFFLE':
+            currentMediaInfo.Shuffle = info.upper() == 'TRUE'
+          elif messageType == 'ERROR':
+            WNPRedux.Log('Error', f'WNPRedux - Browser Error: {info}')
+          elif messageType == 'ERRORDEBUG':
+            WNPRedux.Log('Debug', f'WNPRedux - Browser Error Trace: {info}')
           else:
-            currentMediaInfo.PositionPercent = 100
-        elif messageType == 'VOLUME':
-          currentMediaInfo.Volume = int(info)
-        elif messageType == 'RATING':
-          currentMediaInfo.Rating = int(info)
-        elif messageType == 'REPEAT':
-          currentMediaInfo.RepeatState = info
-        elif messageType == 'SHUFFLE':
-          currentMediaInfo.Shuffle = info.upper() == 'TRUE'
-        elif messageType == 'ERROR':
-          WNPRedux.Log('Error', info)
-        elif messageType == 'ERRORDEBUG':
-          WNPRedux.Log('Debug', info)
-        else:
-          WNPRedux.Log('Warning', f'Unknown message type: {messageType}')
-        
-        if messageType != 'POSITION' and currentMediaInfo.Title != '':
-          WNPRedux._UpdateMediaInfo()
+            WNPRedux.Log('Warning', f'Unknown message type: {messageType}; ({message})')
+          
+          if messageType != 'POSITION' and len(currentMediaInfo.Title) > 0:
+            WNPRedux._UpdateMediaInfo()
+        except Exception as e:
+          WNPRedux.Log('Error', f'WNPRedux - Error parsing data from WebNowPlaying-Redux')
+          WNPRedux.Log('Debug', f'WNPRedux - Error Trace: {e}')
+    except Exception:
+      pass
     finally:
-      WNPRedux.clients.remove(websocket)
+      WNPRedux._clients.remove(websocket)
+      WNPRedux.clients = len(WNPRedux._clients)
       for mediaInfo in WNPRedux._mediaInfoDictionary:
         if mediaInfo.WebSocketID == websocket.id:
           WNPRedux._mediaInfoDictionary.remove(mediaInfo)

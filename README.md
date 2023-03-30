@@ -19,7 +19,7 @@ def logger(type, message):
 WNPRedux.Initialize(1234, '1.0.0', logger)
 
 # Write the current title to the console and pause/unpause the video for 30 seconds
-for i in range (30):
+for i in range(30):
   print(WNPRedux.mediaInfo.Title)
   WNPRedux.mediaEvents.TogglePlaying()
   time.sleep(1)
@@ -29,14 +29,14 @@ WNPRedux.Close()
 ```
 
 ---
-### `WNPRedux.Initialize(port, version, logger, loopback = '127.0.0.1')`
+### `WNPRedux.Initialize(port, version, logger, listenAddress = '127.0.0.1')`
 Opens the WebSocket if it isn't already opened.  
 `port` should _not_ be used by other adapters already, or interfere with any other programs.  
 `version` has to be 'x.x.x'.
 
 ---
 ### `WNPRedux.isInitialized`
-Whether the WebSocket is initialized or not
+Whether WNPRedux is initialized or not.
 
 ---
 ### `WNPRedux.Log(type, message)`
@@ -48,7 +48,7 @@ Closes the WebSocket if it's opened.
 
 ---
 ### `WNPRedux.clients`
-A set of connected clients, useful with `len(WNPRedux.clients)` to see if there are any active connections.  
+Number of clients currently connected.
 
 ---
 ### `WNPRedux.mediaInfo`
