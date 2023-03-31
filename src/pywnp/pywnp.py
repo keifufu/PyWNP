@@ -2,6 +2,7 @@ import asyncio
 from websockets import serve
 from datetime import datetime
 from threading import Thread
+import time
 
 class MediaInfo:
   def __init__(self):
@@ -141,11 +142,15 @@ class WNPRedux:
     asyncio.run(WNPRedux._start(port, listenAddress))
 
   async def _start(port, listenAddress):
-    if WNPRedux._server != None: return
-    WNPRedux._server = serve(WNPRedux._onConnect, listenAddress, port)
-    WNPRedux._future = asyncio.Future()
-    async with WNPRedux._server:
-      await WNPRedux._future
+    if not WNPRedux.isInitialized: return
+    try:
+      WNPRedux._server = serve(WNPRedux._onConnect, listenAddress, port)
+      WNPRedux._future = asyncio.Future()
+      async with WNPRedux._server:
+        await WNPRedux._future
+    except:
+      time.sleep(5)
+      await WNPRedux._start(port, listenAddress)
 
   def _SendMessage(message):
     for client in WNPRedux._clients:
@@ -160,10 +165,13 @@ class WNPRedux:
   def Close():
     if not WNPRedux.isInitialized: return
     WNPRedux.isInitialized = False
-    WNPRedux._future.set_result(None)
-    WNPRedux._server = None
-    WNPRedux._future = None
-    pass
+    try:
+      WNPRedux._server.ws_server.close()
+      WNPRedux._future.set_result(None)
+      WNPRedux._server = None
+      WNPRedux._future = None
+    except:
+      pass
 
   async def _onConnect(websocket):
     WNPRedux._clients.add(websocket)
@@ -237,7 +245,7 @@ class WNPRedux:
     except Exception:
       pass
     finally:
-      WNPRedux._clients.remove(websocket)
+      WNPRedux._clients.discard(websocket)
       WNPRedux.clients = len(WNPRedux._clients)
       for mediaInfo in WNPRedux._mediaInfoDictionary:
         if mediaInfo.WebSocketID == websocket.id:
