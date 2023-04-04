@@ -164,8 +164,10 @@ class WNPRedux:
 
   def Close():
     if not WNPRedux.isInitialized: return
-    WNPRedux.isInitialized = False
     try:
+      WNPRedux.isInitialized = False
+      for client in WNPRedux._clients:
+        asyncio.run(client.close())
       WNPRedux._server.ws_server.close()
       WNPRedux._future.set_result(None)
       WNPRedux._server = None
