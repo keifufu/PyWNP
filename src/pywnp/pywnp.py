@@ -3,6 +3,7 @@ from websockets import serve
 from datetime import datetime
 from threading import Thread
 import time
+import json
 
 class MediaInfo:
   def __init__(self):
@@ -121,6 +122,7 @@ class WNPRedux:
   mediaEvents = MediaEvents()
   _mediaInfoDictionary = list()
   _server = None
+  _recipients = set()
   _clients = set()
   clients = 0
   _version = '0.0.0'
@@ -132,6 +134,7 @@ class WNPRedux:
     WNPRedux.isInitialized = True
     WNPRedux.mediaInfo = MediaInfo()
     WNPRedux._mediaInfoDictionary = list()
+    WNPRedux._recipients = set()
     WNPRedux._clients = set()
     WNPRedux.clients = 0
     WNPRedux._version = version
@@ -183,6 +186,11 @@ class WNPRedux:
     try:
       async for message in websocket:
         try:
+          if message.upper() == 'RECIPIENT':
+            WNPRedux._recipients.add(websocket.id)
+            await WNPRedux._updateRecipients()
+            continue
+
           messageType = message[:message.index(' ')].upper()
           info = message[message.index(' ') + 1:]
 
@@ -241,6 +249,8 @@ class WNPRedux:
           
           if messageType != 'POSITION' and len(currentMediaInfo.Title) > 0:
             WNPRedux._UpdateMediaInfo()
+          
+          await WNPRedux._updateRecipients()
         except Exception as e:
           WNPRedux.Log('Error', f'WNPRedux - Error parsing data from WebNowPlaying-Redux')
           WNPRedux.Log('Debug', f'WNPRedux - Error Trace: {e}')
@@ -249,6 +259,7 @@ class WNPRedux:
     finally:
       WNPRedux._clients.discard(websocket)
       WNPRedux.clients = len(WNPRedux._clients)
+      WNPRedux._recipients.discard(websocket.id)
       for mediaInfo in WNPRedux._mediaInfoDictionary:
         if mediaInfo.WebSocketID == websocket.id:
           WNPRedux._mediaInfoDictionary.remove(mediaInfo)
@@ -270,6 +281,13 @@ class WNPRedux:
         WNPRedux.mediaInfo = WNPRedux._mediaInfoDictionary[0]
       else:
         WNPRedux.mediaInfo = MediaInfo()
+
+  async def _updateRecipients():
+    try:
+      for client in WNPRedux._clients:
+        if client.id in WNPRedux._recipients:
+          await client.send(json.dumps(WNPRedux.mediaInfo, default=lambda x: x.__dict__).replace('_Title', 'Title').replace('_State', 'State').replace('_Volume', 'Volume'))
+    except: pass
 
   def _ConvertTimeToSeconds(time):
     dur_arr = time.split(':')
