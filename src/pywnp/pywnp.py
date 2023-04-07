@@ -170,13 +170,18 @@ class WNPRedux:
     try:
       WNPRedux.isInitialized = False
       for client in WNPRedux._clients:
-        asyncio.run(client.close())
+        try: asyncio.run(client.close())
+        except: pass
+      WNPRedux.mediaInfo = MediaInfo()
+      WNPRedux._mediaInfoDictionary = list()
+      WNPRedux._recipients = set()
+      WNPRedux._clients = set()
+      WNPRedux.clients = 0
       WNPRedux._server.ws_server.close()
-      WNPRedux._future.set_result(None)
       WNPRedux._server = None
+      WNPRedux._future.set_result(None)
       WNPRedux._future = None
-    except:
-      pass
+    except: pass
 
   async def _onConnect(websocket):
     WNPRedux._clients.add(websocket)
