@@ -2,7 +2,6 @@ import asyncio
 import websockets
 from datetime import datetime
 from threading import Thread
-import time
 import json
 
 class MediaInfo:
@@ -175,8 +174,7 @@ class WNPRedux:
       closed = asyncio.run_coroutine_threadsafe(close(), WNPRedux._loop)
       closed.result(timeout=1.0)
       WNPRedux._loop.stop()
-    except Exception as e:
-      print(e)
+    except: pass
 
   async def _onConnect(websocket):
     WNPRedux._clients.add(websocket)
@@ -265,6 +263,7 @@ class WNPRedux:
           WNPRedux._mediaInfoDictionary.remove(mediaInfo)
           break
       WNPRedux._UpdateMediaInfo()
+      await WNPRedux._updateRecipients()
   
   def _UpdateMediaInfo():
     WNPRedux._mediaInfoDictionary = sorted(WNPRedux._mediaInfoDictionary, key=lambda x: x.Timestamp, reverse=True)
