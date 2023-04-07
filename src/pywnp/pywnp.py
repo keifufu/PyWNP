@@ -1,5 +1,5 @@
 import asyncio
-from websockets import serve
+import websockets
 from datetime import datetime
 from threading import Thread
 import time
@@ -122,11 +122,11 @@ class WNPRedux:
   mediaEvents = MediaEvents()
   _mediaInfoDictionary = list()
   _server = None
+  _loop = None
   _recipients = set()
   _clients = set()
   clients = 0
   _version = '0.0.0'
-  _future = None
   _logger = None
 
   def Initialize(port, version, logger, listenAddress = '127.0.0.1'):
@@ -139,21 +139,14 @@ class WNPRedux:
     WNPRedux.clients = 0
     WNPRedux._version = version
     WNPRedux._logger = logger
-    Thread(target = WNPRedux._threaded_start, args = (port, listenAddress,), daemon=True).start()
+    WNPRedux._loop = asyncio.new_event_loop()
+    WNPRedux._server = WNPRedux._loop.run_until_complete(websockets.serve(
+      WNPRedux._onConnect, listenAddress, port, loop=WNPRedux._loop
+    ))
+    Thread(target = WNPRedux._threaded_start).start()
 
-  def _threaded_start(port, listenAddress):
-    asyncio.run(WNPRedux._start(port, listenAddress))
-
-  async def _start(port, listenAddress):
-    if not WNPRedux.isInitialized: return
-    try:
-      WNPRedux._server = serve(WNPRedux._onConnect, listenAddress, port)
-      WNPRedux._future = asyncio.Future()
-      async with WNPRedux._server:
-        await WNPRedux._future
-    except:
-      time.sleep(5)
-      await WNPRedux._start(port, listenAddress)
+  def _threaded_start():
+    WNPRedux._loop.run_until_complete(WNPRedux._server.wait_closed())
 
   def _SendMessage(message):
     for client in WNPRedux._clients:
@@ -169,19 +162,21 @@ class WNPRedux:
     if not WNPRedux.isInitialized: return
     try:
       WNPRedux.isInitialized = False
-      for client in WNPRedux._clients:
-        try: asyncio.run(client.close())
-        except: pass
       WNPRedux.mediaInfo = MediaInfo()
+      WNPRedux._recipients.clear()
       WNPRedux._mediaInfoDictionary = list()
-      WNPRedux._recipients = set()
-      WNPRedux._clients = set()
+      WNPRedux._clients.clear()
       WNPRedux.clients = 0
-      WNPRedux._server.ws_server.close()
-      WNPRedux._server = None
-      WNPRedux._future.set_result(None)
-      WNPRedux._future = None
-    except: pass
+
+      async def close():
+        WNPRedux._server.close()
+        await WNPRedux._server.wait_closed()
+
+      closed = asyncio.run_coroutine_threadsafe(close(), WNPRedux._loop)
+      closed.result(timeout=1.0)
+      WNPRedux._loop.stop()
+    except Exception as e:
+      print(e)
 
   async def _onConnect(websocket):
     WNPRedux._clients.add(websocket)
