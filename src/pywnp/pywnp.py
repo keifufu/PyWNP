@@ -598,8 +598,11 @@ if is_windows:
           if not media_info._id.replace(WNPReduxNative.id_prefix, '') in new_sessions:
             keys_to_remove.append(media_info._id)
       for key in keys_to_remove:
-        if key in WNPRedux.media_info_dictionary:
-          WNPRedux.media_info_dictionary.remove(key)
+        for media_info in WNPRedux.media_info_dictionary:
+          if media_info._id == key:
+            WNPRedux.media_info_dictionary.remove(media_info)
+            break
+      WNPRedux.update_media_info()
 
     @staticmethod
     def is_app_blacklisted(app_id: str) -> bool:
