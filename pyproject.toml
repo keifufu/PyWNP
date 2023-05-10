@@ -12,7 +12,7 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
 ]
-dependencies = [ "websockets", "winsdk ; platform_system == 'Windows'" ]
+dependencies = [ "aiohttp", "winsdk ; platform_system == 'Windows'" ]
 
 [project.urls]
 "Homepage" = "https://github.com/keifufu/PyWNP"

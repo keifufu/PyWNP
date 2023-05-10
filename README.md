@@ -6,6 +6,9 @@ Refer to [this](https://github.com/keifufu/WebNowPlaying-Redux/blob/main/Creatin
 ## Installing
 Install via pip: `pip install pywnp`
 
+## Native APIs
+Built-in support for [Native APIs](https://github.com/keifufu/WebNowPlaying-Redux/blob/main/NativeAPIs.md).
+
 ## Usage
 ```py
 from pywnp import WNPRedux
@@ -15,8 +18,8 @@ import time
 def logger(type, message):
   print(f'{type}: {message}')
 
-# Start WNP, providing a websocket port, webserver port, version number and a logger
-WNPRedux.start(1234, 1235, '1.0.0', logger)
+# Start WNP, providing a port, version number and a logger
+WNPRedux.start(1234, '1.0.0', logger)
 
 # Write the current title to the console and pause/unpause the video for 30 seconds
 for i in range(30):
@@ -31,11 +34,9 @@ WNPRedux.stop()
 ```
 
 ---
-### `WNPRedux.start(wsPort, webPort, version, logger, listenAddress = '127.0.0.1')`
+### `WNPRedux.start(port, version, logger, listenAddress = '127.0.0.1')`
 Starts WNP if it isn't already started.  
-`wsPort` Port used by the websocket  
-`webPort` Port used by the webserver (used to serve cover files over http)  
-These ports should _not_ be used by other adapters already, or interfere with any other programs.  
+`port` should _not_ be used by other adapters already, or interfere with any other programs.  
 `version` has to be 'x.x.x'.
 
 ---
@@ -61,7 +62,6 @@ Stops WNP if it's started.
 ### `WNPRedux.clients`
 Number of clients currently connected.
 
-# TODO: update this table
 ---
 ### `WNPRedux.media_info`
 Information about the currently active media.

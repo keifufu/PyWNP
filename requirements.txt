@@ -1,2 +1,2 @@
-websockets==10.4
+aiohttp==3.8.4
 winsdk==1.0.0b9 ; platform_system == 'Windows'
