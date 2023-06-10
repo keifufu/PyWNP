@@ -33,7 +33,12 @@ def time_in_seconds_to_string(time_in_seconds: int) -> str:
     return str(math.floor(time_in_minutes / 60)) + ':' + str(pad(math.floor(time_in_minutes % 60), 2)) + ':' + str(pad(math.floor(time_in_seconds % 60), 2))
   except:
     return '0:00'
-  
+
+def get_wnp_path() -> str:
+  # Note: I was going to clean up the old unused folder here but that might conflict with older WNP adapters, so I won't.
+  if is_windows: return os.path.expandvars(r'%LocalAppData%\\WebNowPlaying')
+  else: return os.path.expanduser(r'~\\.config\\WebNowPlaying')
+
 # === END UTILS ===
 
 # === START MEDIA CONTROLS ===
@@ -240,7 +245,7 @@ class HttpServer:
     if not 'name' in request.query: return web.Response(text='No name was provided', content_type='text/html', status=400)
     file_name = request.query['name']
     if not file_name.endswith('.jpg'): return web.Response(text='Invalid image name', content_type='text/html', status=400)
-    file_path = f'{WNPRedux._wnp_path}\\{file_name}'
+    file_path = f'{get_wnp_path()}\\{file_name}'
     if not os.path.exists(file_path): return web.Response(text='Image not found', content_type='text/html', status=404)
     with open(file_path, 'rb') as f:
       image_data = f.read()
@@ -275,10 +280,10 @@ class HttpServer:
 
             if (type == 'USE_NATIVE_APIS'):
               WNPRedux.is_using_native_apis = bool(data)
-              if WNPRedux.is_using_native_apis and not os.path.isdir(WNPRedux._use_native_apis_path):
-                os.makedirs(WNPRedux._use_native_apis_path, exist_ok=True)
-              elif not WNPRedux.is_using_native_apis and os.path.isdir(WNPRedux._use_native_apis_path):
-                os.rmdir(WNPRedux._use_native_apis_path)
+              if WNPRedux.is_using_native_apis and os.path.isdir(WNPRedux._disable_native_apis_path):
+                os.rmdir(WNPRedux._disable_native_apis_path)
+              elif not WNPRedux.is_using_native_apis and not os.path.isdir(WNPRedux._disable_native_apis_path):
+                os.makedirs(WNPRedux._disable_native_apis_path, exist_ok=True)
               WNPRedux.update_media_info()
               HttpServer.update_recipients()
               continue
@@ -289,8 +294,6 @@ class HttpServer:
               media_info.player_name = data
             elif type == 'IS_NATIVE':
               media_info.is_native = bool(data)
-            elif type == 'TIMESTAMP_OFFSET_SECONDS':
-              media_info.timestamp_offset_in_seconds = int(data)
             elif type == 'PLAYER_CONTROLS':
               media_info.controls = MediaControls.from_json(data)
             elif type == 'STATE':
@@ -382,9 +385,8 @@ class HttpServer:
 
 class WNPRedux:
   is_started: bool = False
-  is_using_native_apis: bool = False
-  _wnp_path = os.path.expanduser('~\\WebNowPlaying')
-  _use_native_apis_path = os.path.join(_wnp_path, 'use_native_apis')
+  is_using_native_apis: bool = True
+  _disable_native_apis_path = os.path.join(get_wnp_path(), 'use_native_apis');
   media_info: MediaInfo = MediaInfo()
   media_info_dictionary: List[MediaInfo] = list()
   clients: int = 0
@@ -397,7 +399,7 @@ class WNPRedux:
     WNPRedux.is_started = True
     HttpServer.start(port)
     if is_windows: WNPReduxNative.start(port)
-    WNPRedux.is_using_native_apis = os.path.isdir(WNPRedux._use_native_apis_path)
+    WNPRedux.is_using_native_apis = not os.path.isdir(WNPRedux._disable_native_apis_path)
     WNPRedux._version = version
     WNPRedux._logger = logger
   
@@ -648,7 +650,8 @@ if is_windows:
         if buffer.length == 0: return
         buffer_reader = DataReader.from_buffer(buffer)
         byte_buffer = buffer_reader.read_buffer(buffer.length)
-        path = f'{WNPRedux._wnp_path}\\cover-{WNPReduxNative.port}.jpg'
+        os.makedirs(get_wnp_path(), exist_ok=True)
+        path = f'{get_wnp_path()}\\cover-{WNPReduxNative.port}.jpg'
         with open(path, 'wb+') as fobj:
           fobj.write(bytearray(byte_buffer))
         return f'http://127.0.0.1:{WNPReduxNative.port}/cover?name=cover-{WNPReduxNative.port}.jpg&r={random.randint(0, 999999)}'
